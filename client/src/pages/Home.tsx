@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,7 @@ export default function Home() {
   const [formData, setFormData] = useState({ name: "", quantity: "", price: "" });
   const [editingId, setEditingId] = useState<number | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const utils = trpc.useUtils();
 
   // Queries y mutations de tRPC
   const { data: items = [], isLoading } = trpc.croche.list.useQuery(undefined, {
@@ -26,25 +27,37 @@ export default function Home() {
   });
 
   const createMutation = trpc.croche.create.useMutation({
-    onSuccess: () => {
-      trpc.useUtils().croche.list.invalidate();
+    onSuccess: async () => {
+      await utils.croche.list.invalidate();
       setFormData({ name: "", quantity: "", price: "" });
       setShowForm(false);
+    },
+    onError: (error) => {
+      console.error("Error al crear item:", error);
+      alert("Error al agregar material");
     },
   });
 
   const updateMutation = trpc.croche.update.useMutation({
-    onSuccess: () => {
-      trpc.useUtils().croche.list.invalidate();
+    onSuccess: async () => {
+      await utils.croche.list.invalidate();
       setFormData({ name: "", quantity: "", price: "" });
       setEditingId(null);
       setShowForm(false);
     },
+    onError: (error) => {
+      console.error("Error al actualizar item:", error);
+      alert("Error al actualizar material");
+    },
   });
 
   const deleteMutation = trpc.croche.delete.useMutation({
-    onSuccess: () => {
-      trpc.useUtils().croche.list.invalidate();
+    onSuccess: async () => {
+      await utils.croche.list.invalidate();
+    },
+    onError: (error) => {
+      console.error("Error al eliminar item:", error);
+      alert("Error al eliminar material");
     },
   });
 
@@ -73,7 +86,7 @@ export default function Home() {
     setFormData({
       name: item.name,
       quantity: item.quantity.toString(),
-      price: item.price.toString(),
+      price: (item.price / 100).toString(),
     });
     setEditingId(item.id);
     setShowForm(true);
@@ -108,7 +121,7 @@ export default function Home() {
     );
   }
 
-  const totalValue = items.reduce((sum: number, item: typeof items[0]) => sum + item.price * item.quantity, 0);
+  const totalValue = items.reduce((sum: number, item: typeof items[0]) => sum + (item.price / 100) * item.quantity, 0);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 p-4 md:p-8">
@@ -131,7 +144,7 @@ export default function Home() {
             <div className="text-center">
               <p className="text-gray-600 text-sm mb-1">Quantidade Total</p>
               <p className="text-3xl font-bold text-pink-600">
-                {items.reduce((sum, item) => sum + item.quantity, 0)}
+                {items.reduce((sum: number, item: typeof items[0]) => sum + item.quantity, 0)}
               </p>
             </div>
             <div className="text-center col-span-2 md:col-span-1">
@@ -256,13 +269,13 @@ export default function Home() {
                         <div>
                           <p className="text-gray-600">Preço Unitário</p>
                           <p className="text-xl font-semibold text-green-600">
-                            R$ {item.price.toFixed(2).replace(".", ",")}
+                            R$ {(item.price / 100).toFixed(2).replace(".", ",")}
                           </p>
                         </div>
                         <div className="col-span-2">
                           <p className="text-gray-600">Valor Total</p>
                           <p className="text-xl font-semibold text-blue-600">
-                            R$ {(item.price * item.quantity).toFixed(2).replace(".", ",")}
+                            R$ {((item.price / 100) * item.quantity).toFixed(2).replace(".", ",")}
                           </p>
                         </div>
                       </div>
