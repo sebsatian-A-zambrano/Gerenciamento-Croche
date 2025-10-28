@@ -3,6 +3,7 @@
 ## Bugs
 - [x] Items no se actualizan automáticamente después de agregar/editar/eliminar (requiere recargar página) - CORREGIDO
 - [x] Los números totales (cantidad, valor) no se actualizan en tiempo real - CORREGIDO
+- [x] En dispositivos móviles, los items no se actualizan automáticamente (requiere recargar página) - CORREGIDO
 
 ## Características Completadas
 - [x] Interfaz CRUD responsiva

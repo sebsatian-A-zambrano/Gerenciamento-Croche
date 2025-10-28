@@ -22,13 +22,17 @@ export default function Home() {
   const utils = trpc.useUtils();
 
   // Queries y mutations de tRPC
-  const { data: items = [], isLoading } = trpc.croche.list.useQuery(undefined, {
+  const { data: items = [], isLoading, refetch } = trpc.croche.list.useQuery(undefined, {
     enabled: isAuthenticated,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    staleTime: 0,
   });
 
   const createMutation = trpc.croche.create.useMutation({
     onSuccess: async () => {
       await utils.croche.list.invalidate();
+      await refetch();
       setFormData({ name: "", quantity: "", price: "" });
       setShowForm(false);
     },
@@ -41,6 +45,7 @@ export default function Home() {
   const updateMutation = trpc.croche.update.useMutation({
     onSuccess: async () => {
       await utils.croche.list.invalidate();
+      await refetch();
       setFormData({ name: "", quantity: "", price: "" });
       setEditingId(null);
       setShowForm(false);
@@ -54,6 +59,7 @@ export default function Home() {
   const deleteMutation = trpc.croche.delete.useMutation({
     onSuccess: async () => {
       await utils.croche.list.invalidate();
+      await refetch();
     },
     onError: (error) => {
       console.error("Error al eliminar item:", error);
