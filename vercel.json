@@ -3,14 +3,24 @@
   "outputDirectory": "dist",
   "installCommand": "pnpm install",
   "framework": "vite",
-  "rewrites": [
+  "env": {
+    "NODE_ENV": "production"
+  },
+  "functions": {
+    "dist/index.js": {
+      "runtime": "nodejs20.x",
+      "memory": 1024,
+      "maxDuration": 60
+    }
+  },
+  "routes": [
     {
-      "source": "/api/:path*",
-      "destination": "/index.js"
+      "src": "/api/(.*)",
+      "dest": "/dist/index.js"
     },
     {
-      "source": "/:path*",
-      "destination": "/client/:path*"
+      "src": "/(.*)",
+      "dest": "/dist/index.js"
     }
   ]
 }
