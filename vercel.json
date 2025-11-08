@@ -19,6 +19,14 @@
       "dest": "/dist/index.js"
     },
     {
+      "src": "/static/(.*)",
+      "dest": "/dist/public/static/$1"
+    },
+    {
+      "src": "/(.*\\.[a-z]+)$",
+      "dest": "/dist/public/$1"
+    },
+    {
       "src": "/(.*)",
       "dest": "/dist/index.js"
     }
