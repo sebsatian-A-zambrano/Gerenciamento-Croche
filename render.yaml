@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: gerenciamento-croche
+    env: node
+    plan: free
+    repo: https://github.com/sebsatian-A-zambrano/Gerenciamento-Croche
+    branch: release/render-deploy
+    buildCommand: pnpm install && pnpm run build
+    startCommand: pnpm run start
+    envVars:
+      - key: NODE_ENV
+        value: production

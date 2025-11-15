@@ -9,6 +9,33 @@ This project uses Vite for the frontend and an Express/tRPC server for the backe
    pnpm run vercel-build
  - Set the output directory to: dist
 
+CLI-based deploy using tokens (optional):
+
+- Vercel CLI (frontend):
+  - Create a token: https://vercel.com/settings/tokens
+  - Export it locally:
+    ```bash
+    export VERCEL_TOKEN=your_token_here
+    ```
+  - Deploy (from the repo root):
+    ```bash
+    npx vercel --prod --token $VERCEL_TOKEN
+    ```
+
+- Render (backend):
+  - Best: connect GitHub to Render and the Render service will auto-deploy when you push.
+  - Optionally you can use Render CLI with a token to trigger deploys:
+    ```bash
+    npm i -g @render/cli
+    export RENDER_TOKEN=your_token_here
+    render login --token $RENDER_TOKEN
+    render services deploy <service-id> --token $RENDER_TOKEN
+    ```
+  - Or push a branch and let Render auto-deploy:
+    ```bash
+    git push origin release/render-deploy
+    ```
+
 2) Environment variables
  - If your backend runs on a different host in production, set `VITE_API_BASE_URL` to that backend URL (e.g., https://api.example.com) in Vercel project settings.
  - If you host the backend elsewhere (Railway/Render) or will add serverless functions, ensure `VITE_API_BASE_URL` points to that host;
