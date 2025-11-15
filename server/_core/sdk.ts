@@ -270,8 +270,8 @@ class SDKServer {
     const signedInAt = new Date();
     let user = await db.getUser(sessionUserId);
 
-    // If user not in DB, sync from OAuth server automatically
-    if (!user) {
+    // If user not in DB, try to sync from OAuth server only if it's configured
+    if (!user && ENV.oAuthServerUrl) {
       try {
         const userInfo = await this.getUserInfoWithJwt(sessionCookie ?? "");
         await db.upsertUser({
@@ -288,14 +288,32 @@ class SDKServer {
       }
     }
 
+    // For local auth without DB, construct a basic user object from session
+    if (!user && session.name) {
+      user = {
+        id: sessionUserId,
+        name: session.name,
+        email: null,
+        loginMethod: "local",
+        lastSignedIn: signedInAt,
+        role: "user",
+        createdAt: new Date(),
+      };
+    }
+
     if (!user) {
       throw ForbiddenError("User not found");
     }
 
-    await db.upsertUser({
-      id: user.id,
-      lastSignedIn: signedInAt,
-    });
+    // Try to update lastSignedIn in DB if available
+    try {
+      await db.upsertUser({
+        id: user.id,
+        lastSignedIn: signedInAt,
+      });
+    } catch (error) {
+      // Silently fail if DB is not available for local auth
+    }
 
     return user;
   }
