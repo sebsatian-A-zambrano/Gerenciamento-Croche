@@ -1,9 +1,9 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
+
 import { Trash2, Edit2, Plus } from "lucide-react";
-import { trpc } from "@/lib/trpc";
 
 interface Item {
   id: number;
@@ -12,77 +12,100 @@ interface Item {
   price: number;
 }
 
+
+// Use Vite env or relative API path so it works both locally and in production
+// ImportMeta typing can vary; cast to any to avoid build issues if types aren't set
+const API_URL = ((import.meta as any).env?.VITE_API_BASE_URL as string) || '/api/croche';
+
+async function fetchItems(): Promise<Item[]> {
+  const res = await fetch(API_URL);
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+async function createItem(data: Omit<Item, 'id'>): Promise<Item> {
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+async function updateItem(id: number, data: Omit<Item, 'id'>): Promise<Item> {
+  const res = await fetch(API_URL, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id, ...data }),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+async function deleteItem(id: number): Promise<void> {
+  const res = await fetch(API_URL, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id }),
+  });
+  if (!res.ok) throw new Error(await res.text());
+}
+
+
+
+
 export default function Home() {
   const [formData, setFormData] = useState({ name: "", quantity: "", price: "" });
   const [editingId, setEditingId] = useState<number | null>(null);
   const [showForm, setShowForm] = useState(false);
-  const utils = trpc.useUtils();
+  const [items, setItems] = useState<Item[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isPending, setIsPending] = useState(false);
 
-  // Queries y mutations de tRPC
-  const { data: items = [], isLoading, refetch } = trpc.croche.list.useQuery(undefined, {
-    enabled: true,
-    refetchOnWindowFocus: true,
-    refetchOnReconnect: true,
-    staleTime: 0,
-  });
+  const loadItems = async () => {
+    setIsLoading(true);
+    try {
+      const data = await fetchItems();
+      setItems(data);
+    } catch (err: any) {
+      setItems([]);
+      alert('Erro ao carregar materiais: ' + (err?.message || err));
+    }
+    setIsLoading(false);
+  };
 
-  const createMutation = trpc.croche.create.useMutation({
-    onSuccess: async () => {
-      await utils.croche.list.invalidate();
-      await refetch();
-      setFormData({ name: "", quantity: "", price: "" });
-      setShowForm(false);
-    },
-    onError: (error) => {
-      console.error("Error al crear item:", error);
-      alert("Error al agregar material");
-    },
-  });
+  // Load items on mount
+  React.useEffect(() => {
+    loadItems();
+  }, []);
 
-  const updateMutation = trpc.croche.update.useMutation({
-    onSuccess: async () => {
-      await utils.croche.list.invalidate();
-      await refetch();
-      setFormData({ name: "", quantity: "", price: "" });
-      setEditingId(null);
-      setShowForm(false);
-    },
-    onError: (error) => {
-      console.error("Error al actualizar item:", error);
-      alert("Error al actualizar material");
-    },
-  });
-
-  const deleteMutation = trpc.croche.delete.useMutation({
-    onSuccess: async () => {
-      await utils.croche.list.invalidate();
-      await refetch();
-    },
-    onError: (error) => {
-      console.error("Error al eliminar item:", error);
-      alert("Error al eliminar material");
-    },
-  });
-
-  const handleAddOrUpdate = (e: React.FormEvent) => {
+  const handleAddOrUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!formData.name || !formData.quantity || !formData.price) {
       alert("Por favor, preencha todos os campos");
       return;
     }
-
+    setIsPending(true);
     const data = {
       name: formData.name,
       quantity: parseInt(formData.quantity),
-      price: parseFloat(formData.price),
+      price: Math.round(parseFloat(formData.price) * 100),
     };
-
-    if (editingId) {
-      updateMutation.mutate({ id: editingId, ...data });
-    } else {
-      createMutation.mutate(data);
+    try {
+      if (editingId) {
+        await updateItem(editingId, data);
+      } else {
+        await createItem(data);
+      }
+      setFormData({ name: "", quantity: "", price: "" });
+      setEditingId(null);
+      setShowForm(false);
+      await loadItems();
+    } catch (error: any) {
+      alert("Erro ao salvar material: " + (error?.message || error));
     }
+    setIsPending(false);
   };
 
   const handleEdit = (item: Item) => {
@@ -95,9 +118,16 @@ export default function Home() {
     setShowForm(true);
   };
 
-  const handleDelete = (id: number) => {
+  const handleDelete = async (id: number) => {
     if (confirm("Tem certeza que deseja deletar este item?")) {
-      deleteMutation.mutate({ id });
+      setIsPending(true);
+      try {
+        await deleteItem(id);
+        await loadItems();
+      } catch (error: any) {
+        alert("Erro ao deletar material: " + (error?.message || error));
+      }
+      setIsPending(false);
     }
   };
 
@@ -107,7 +137,7 @@ export default function Home() {
     setShowForm(false);
   };
 
-  const totalValue = items.reduce((sum: number, item: typeof items[0]) => sum + (item.price / 100) * item.quantity, 0);
+  const totalValue = items.reduce((sum: number, item: Item) => sum + (item.price / 100) * item.quantity, 0);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 p-4 md:p-8">
@@ -130,7 +160,7 @@ export default function Home() {
             <div className="text-center">
               <p className="text-gray-600 text-sm mb-1">Quantidade Total</p>
               <p className="text-3xl font-bold text-pink-600">
-                {items.reduce((sum: number, item: typeof items[0]) => sum + item.quantity, 0)}
+                {items.reduce((sum: number, item: Item) => sum + item.quantity, 0)}
               </p>
             </div>
             <div className="text-center col-span-2 md:col-span-1">
@@ -207,7 +237,7 @@ export default function Home() {
               <div className="flex gap-3 pt-4">
                 <Button
                   type="submit"
-                  disabled={createMutation.isPending || updateMutation.isPending}
+                  disabled={isPending}
                   className="flex-1 bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-semibold disabled:opacity-50"
                 >
                   {editingId ? "Atualizar" : "Adicionar"}
@@ -237,7 +267,7 @@ export default function Home() {
             </Card>
           ) : (
             <div className="space-y-4">
-              {items.map((item: typeof items[0]) => (
+              {items.map((item: Item) => (
                 <Card
                   key={item.id}
                   className="p-4 md:p-6 bg-white shadow-lg border-0 hover:shadow-xl transition-shadow"
@@ -277,7 +307,7 @@ export default function Home() {
                       </Button>
                       <Button
                         onClick={() => handleDelete(item.id)}
-                        disabled={deleteMutation.isPending}
+                        disabled={isPending}
                         className="flex-1 md:flex-none bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 disabled:opacity-50"
                       >
                         <Trash2 size={18} />

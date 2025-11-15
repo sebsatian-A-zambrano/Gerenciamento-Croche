@@ -1,28 +1,15 @@
-import express from "express";
-import { createServer } from "http";
-import path from "path";
-import { fileURLToPath } from "url";
-import fs from "fs";
+import express from 'express';
+import path from 'path';
+import fs from 'fs';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-async function startServer() {
-  const app = express();
-  const server = createServer(app);
-
-
-  // Middleware para JSON
-  app.use(express.json());
-
-  // CRUD API /api/croche
-  const DATA_PATH = path.resolve(process.cwd(), "croche_items.json");
+export function registerCrocheRoutes(app: express.Express) {
+  const DATA_PATH = path.resolve(process.cwd(), 'croche_items.json');
 
   function readData() {
     try {
       const raw = fs.readFileSync(DATA_PATH, 'utf8');
       return JSON.parse(raw);
-    } catch (err) {
+    } catch (err: any) {
       console.error('[FS] Error leyendo', DATA_PATH, err?.message || err);
       if (err && err.stack) console.error(err.stack);
       return [];
@@ -32,19 +19,18 @@ async function startServer() {
   function writeData(data: any) {
     try {
       fs.writeFileSync(DATA_PATH, JSON.stringify(data, null, 2));
-    } catch (err) {
+    } catch (err: any) {
       console.error('[FS] Error escribiendo', DATA_PATH, err?.message || err);
       if (err && err.stack) console.error(err.stack);
       throw err;
     }
   }
 
-
   app.get('/api/croche', (req, res) => {
     try {
       const items = readData();
       res.json(items);
-    } catch (err) {
+    } catch (err: any) {
       console.error('[API] Error GET /api/croche:', err);
       res.status(500).json({ error: 'Error al leer datos', details: err?.message || String(err) });
     }
@@ -54,7 +40,6 @@ async function startServer() {
     try {
       console.log('[API] POST /api/croche body:', req.body);
       const items = readData();
-      // Normalizar los datos recibidos
       const newItem = {
         id: Date.now(),
         name: String(req.body.name),
@@ -65,10 +50,26 @@ async function startServer() {
       writeData(items);
       console.log('[API] Nuevo material creado:', newItem);
       res.status(201).json(newItem);
-    } catch (err) {
+    } catch (err: any) {
       console.error('[API] Error POST /api/croche:', err);
       if (err && err.stack) console.error(err.stack);
       res.status(500).json({ error: 'Error al guardar material', details: err?.message || String(err), stack: err?.stack });
+    }
+  });
+
+  app.put('/api/croche', (req, res) => {
+    try {
+      const items = readData();
+      const { id, ...rest } = req.body;
+      const idx = items.findIndex((i: any) => i.id === id);
+      if (idx === -1) return res.status(404).json({ error: 'Material no encontrado' });
+      items[idx] = { ...items[idx], ...rest };
+      writeData(items);
+      console.log('[API] Material actualizado:', items[idx]);
+      res.json(items[idx]);
+    } catch (err: any) {
+      console.error('[API] Error PUT /api/croche:', err);
+      res.status(500).json({ error: 'Error al actualizar material', details: err?.message || String(err) });
     }
   });
 
@@ -80,39 +81,11 @@ async function startServer() {
       writeData(filtered);
       console.log('[API] Material eliminado:', id);
       res.json({ ok: true });
-    } catch (err) {
+    } catch (err: any) {
       console.error('[API] Error DELETE /api/croche:', err);
-      res.status(500).json({ error: 'Error al eliminar material' });
+      res.status(500).json({ error: 'Error al eliminar material', details: err?.message || String(err) });
     }
   });
-
-  // Serve static files from dist/public in production
-  const staticPath =
-    process.env.NODE_ENV === "production"
-      ? path.resolve(__dirname, "public")
-      : path.resolve(__dirname, "..", "dist", "public");
-
-  app.use(express.static(staticPath));
-
-  // Handle client-side routing - serve index.html for all routes
-  app.get("*", (_req, res) => {
-    res.sendFile(path.join(staticPath, "index.html"));
-  });
-
-  let port = process.env.PORT || 3000;
-  function startListening(p) {
-    server.listen(p, () => {
-      console.log(`Server running on http://localhost:${p}/`);
-    }).on('error', err => {
-      if (err.code === 'EADDRINUSE') {
-        console.warn(`Port ${p} is busy, trying ${p + 1}`);
-        startListening(p + 1);
-      } else {
-        throw err;
-      }
-    });
-  }
-  startListening(Number(port));
 }
 
-startServer().catch(console.error);
+export default registerCrocheRoutes;
