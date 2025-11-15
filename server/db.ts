@@ -113,7 +113,21 @@ export async function getCrocheItems(userId: string) {
     return result;
   } catch (error) {
     console.error("[Database] Failed to get croche items:", error);
-    return [];
+    console.warn("[Database] Falling back to local storage due to DB error");
+    try {
+      const items = localDb.getLocalCrocheItems(userId);
+      return items.map(item => ({
+        ...item,
+        id: item.id,
+        userId: item.userId,
+        name: item.name,
+        quantity: item.quantity,
+        price: item.price,
+      })) as unknown as CrocheItem[];
+    } catch (err) {
+      console.error('[LocalDB] Fallback failed:', err);
+      return [];
+    }
   }
 }
 
@@ -156,7 +170,25 @@ export async function createCrocheItem(
     return created.length > 0 ? created[0] : null;
   } catch (error) {
     console.error("[Database] Failed to create croche item:", error);
-    return null;
+    console.warn("[Database] Falling back to local storage due to DB error");
+    try {
+      const created = localDb.createLocalCrocheItem(userId, {
+        name: item.name || "Unnamed",
+        quantity: item.quantity || 0,
+        price: item.price || 0,
+      });
+      return {
+        ...created,
+        id: created.id,
+        userId: created.userId,
+        name: created.name,
+        quantity: created.quantity,
+        price: created.price,
+      } as unknown as CrocheItem;
+    } catch (err) {
+      console.error('[LocalDB] Fallback create failed:', err);
+      return null;
+    }
   }
 }
 
@@ -204,7 +236,27 @@ export async function updateCrocheItem(
     return updated.length > 0 ? updated[0] : null;
   } catch (error) {
     console.error("[Database] Failed to update croche item:", error);
-    return null;
+    console.warn("[Database] Falling back to local storage due to DB error");
+    try {
+      const updated = localDb.updateLocalCrocheItem(id, userId, {
+        name: item.name,
+        quantity: item.quantity,
+        price: item.price,
+      });
+      return updated
+        ? ({
+            ...updated,
+            id: updated.id,
+            userId: updated.userId,
+            name: updated.name,
+            quantity: updated.quantity,
+            price: updated.price,
+          } as unknown as CrocheItem)
+        : null;
+    } catch (err) {
+      console.error('[LocalDB] Fallback update failed:', err);
+      return null;
+    }
   }
 }
 
@@ -222,7 +274,13 @@ export async function deleteCrocheItem(id: number, userId: string): Promise<bool
     return true;
   } catch (error) {
     console.error("[Database] Failed to delete croche item:", error);
-    return false;
+    console.warn("[Database] Falling back to local storage due to DB error");
+    try {
+      return localDb.deleteLocalCrocheItem(id, userId);
+    } catch (err) {
+      console.error('[LocalDB] Fallback delete failed:', err);
+      return false;
+    }
   }
 }
 

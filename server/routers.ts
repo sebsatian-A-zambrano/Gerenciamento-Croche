@@ -20,10 +20,12 @@ export const appRouter = router({
   }),
 
   croche: router({
-    list: protectedProcedure.query(({ ctx }) =>
-      getCrocheItems(ctx.user.id)
+    // Allow unauthenticated access by falling back to a local user id.
+    // This makes the frontend usable without any login flow.
+    list: publicProcedure.query(({ ctx }) =>
+      getCrocheItems(ctx.user?.id ?? "local")
     ),
-    create: protectedProcedure
+    create: publicProcedure
       .input(
         z.object({
           name: z.string().min(1),
@@ -32,13 +34,13 @@ export const appRouter = router({
         })
       )
       .mutation(({ ctx, input }) =>
-        createCrocheItem(ctx.user.id, {
+        createCrocheItem(ctx.user?.id ?? "local", {
           name: input.name,
           quantity: input.quantity,
           price: input.price,
         })
       ),
-    update: protectedProcedure
+    update: publicProcedure
       .input(
         z.object({
           id: z.number().int(),
@@ -48,16 +50,16 @@ export const appRouter = router({
         })
       )
       .mutation(({ ctx, input }) =>
-        updateCrocheItem(input.id, ctx.user.id, {
+        updateCrocheItem(input.id, ctx.user?.id ?? "local", {
           name: input.name,
           quantity: input.quantity,
           price: input.price,
         })
       ),
-    delete: protectedProcedure
+    delete: publicProcedure
       .input(z.object({ id: z.number().int() }))
       .mutation(({ ctx, input }) =>
-        deleteCrocheItem(input.id, ctx.user.id)
+        deleteCrocheItem(input.id, ctx.user?.id ?? "local")
       ),
   }),
 });

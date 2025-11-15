@@ -1,11 +1,9 @@
 import { useState } from "react";
-import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Trash2, Edit2, Plus } from "lucide-react";
 import { trpc } from "@/lib/trpc";
-import { getLoginUrl } from "@/const";
 
 interface Item {
   id: number;
@@ -15,7 +13,6 @@ interface Item {
 }
 
 export default function Home() {
-  const { user, isAuthenticated } = useAuth();
   const [formData, setFormData] = useState({ name: "", quantity: "", price: "" });
   const [editingId, setEditingId] = useState<number | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -23,7 +20,7 @@ export default function Home() {
 
   // Queries y mutations de tRPC
   const { data: items = [], isLoading, refetch } = trpc.croche.list.useQuery(undefined, {
-    enabled: isAuthenticated,
+    enabled: true,
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
     staleTime: 0,
@@ -110,23 +107,6 @@ export default function Home() {
     setShowForm(false);
   };
 
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 flex items-center justify-center p-4">
-        <Card className="p-8 bg-white shadow-lg border-0 text-center max-w-md">
-          <h1 className="text-3xl font-bold text-purple-900 mb-4">🧶 Gerenciamento de Crochê</h1>
-          <p className="text-gray-600 mb-6">Faça login para gerenciar seus materiais de crochê</p>
-          <Button
-            onClick={() => (window.location.href = getLoginUrl())}
-            className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-3 rounded-lg font-semibold"
-          >
-            Fazer Login
-          </Button>
-        </Card>
-      </div>
-    );
-  }
-
   const totalValue = items.reduce((sum: number, item: typeof items[0]) => sum + (item.price / 100) * item.quantity, 0);
 
   return (
@@ -137,7 +117,7 @@ export default function Home() {
           <h1 className="text-4xl md:text-5xl font-bold text-purple-900 mb-2">
             🧶 Gerenciamento de Crochê
           </h1>
-          <p className="text-gray-600">Olá, {user?.name}! Organize seus materiais e controle seus gastos</p>
+          <p className="text-gray-600">Organize seus materiais e controle seus gastos</p>
         </div>
 
         {/* Resumo */}
