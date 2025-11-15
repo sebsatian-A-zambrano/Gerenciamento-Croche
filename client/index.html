@@ -6,18 +6,31 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1"
     />
-    <link rel="icon" type="image/png" href="%VITE_APP_LOGO%" />
-    <link rel="apple-touch-icon" href="%VITE_APP_LOGO%" />
-    <title>%VITE_APP_TITLE%</title>
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/favicon.png" />
+    <title>App</title>
   </head>
 
   <body>
     <div id="root"></div>
+    <script type="module">
+      // Dynamically set title, favicon and optionally inject analytics script
+      const { VITE_APP_LOGO, VITE_APP_TITLE, VITE_ANALYTICS_ENDPOINT, VITE_ANALYTICS_WEBSITE_ID } = import.meta.env;
+      if (VITE_APP_TITLE) document.title = VITE_APP_TITLE;
+      if (VITE_APP_LOGO) {
+        const ico = document.querySelector('link[rel="icon"]');
+        const apple = document.querySelector('link[rel="apple-touch-icon"]');
+        if (ico) ico.href = VITE_APP_LOGO;
+        if (apple) apple.href = VITE_APP_LOGO;
+      }
+      if (VITE_ANALYTICS_ENDPOINT) {
+        const s = document.createElement('script');
+        s.defer = true;
+        s.src = `${VITE_ANALYTICS_ENDPOINT}/umami`;
+        if (VITE_ANALYTICS_WEBSITE_ID) s.dataset.websiteId = VITE_ANALYTICS_WEBSITE_ID;
+        document.head.appendChild(s);
+      }
+    </script>
     <script type="module" src="/src/main.tsx"></script>
-    <script
-      defer
-      src="%VITE_ANALYTICS_ENDPOINT%/umami"
-      data-website-id="%VITE_ANALYTICS_WEBSITE_ID%"
-    ></script>
   </body>
 </html>
