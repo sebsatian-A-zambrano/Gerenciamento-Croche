@@ -1,28 +1,16 @@
 {
   "version": 2,
   "builds": [
-    { "src": "client/package.json", "use": "@vercel/static-build", "config": { "distDir": "dist" } }
+    {
+      "src": "client/package.json",
+      "use": "@vercel/static-build",
+      "config": { "distDir": "dist" }
+    }
   ],
   "routes": [
     { "src": "/api/(.*)", "dest": "/api/$1" },
     { "src": "/(.*)", "dest": "/index.html" }
-  ]
-}
-{
-  "version": 2,
-  "buildCommand": "pnpm run vercel-build",
-  "installCommand": "pnpm install --no-frozen-lockfile",
-  "env": {
-    "VITE_API_BASE_URL": "@vite_api_base_url"
-  },
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/static-build",
-      "config": { "distDir": "dist/public" }
-    }
   ],
-  "routes": [
-    { "src": "^/(.*)$", "dest": "/index.html" }
-  ]
+  "buildCommand": "pnpm run vercel-build",
+  "installCommand": "pnpm install --no-frozen-lockfile"
 }
