@@ -46,10 +46,24 @@ queryClient.getMutationCache().subscribe(event => {
   }
 });
 
+// Configure API base URL: allow overriding with VITE_API_BASE_URL in production.
+const apiBase = (import.meta.env as any).VITE_API_BASE_URL ?? "";
+const apiUrl = apiBase ? new URL(
+  "/api/trpc",
+  // ensure base is an absolute URL; fallback to relative path if invalid
+  (() => {
+    try {
+      return String(apiBase) || window.location.origin;
+    } catch {
+      return window.location.origin;
+    }
+  })()
+).toString() : "/api/trpc";
+
 const trpcClient = trpc.createClient({
   links: [
     httpBatchLink({
-      url: "/api/trpc",
+      url: apiUrl,
       transformer: superjson,
       fetch(input, init) {
         return globalThis.fetch(input, {
