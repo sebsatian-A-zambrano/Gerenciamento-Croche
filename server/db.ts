@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { InsertUser, users, crocheItems, InsertCrocheItem, CrocheItem } from "../drizzle/schema";
 import { ENV } from './_core/env';
+import * as localDb from './localDb';
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -92,8 +93,16 @@ export async function getUser(id: string) {
 export async function getCrocheItems(userId: string) {
   const db = await getDb();
   if (!db) {
-    console.warn("[Database] Cannot get croche items: database not available");
-    return [];
+    console.warn("[Database] Cannot get croche items: database not available, using local storage");
+    const items = localDb.getLocalCrocheItems(userId);
+    return items.map(item => ({
+      ...item,
+      id: item.id,
+      userId: item.userId,
+      name: item.name,
+      quantity: item.quantity,
+      price: item.price,
+    })) as unknown as CrocheItem[];
   }
 
   try {
@@ -114,8 +123,20 @@ export async function createCrocheItem(
 ): Promise<CrocheItem | null> {
   const db = await getDb();
   if (!db) {
-    console.warn("[Database] Cannot create croche item: database not available");
-    return null;
+    console.warn("[Database] Cannot create croche item: database not available, using local storage");
+    const created = localDb.createLocalCrocheItem(userId, {
+      name: item.name || "Unnamed",
+      quantity: item.quantity || 0,
+      price: item.price || 0,
+    });
+    return {
+      ...created,
+      id: created.id,
+      userId: created.userId,
+      name: created.name,
+      quantity: created.quantity,
+      price: created.price,
+    } as unknown as CrocheItem;
   }
 
   try {
@@ -146,8 +167,20 @@ export async function updateCrocheItem(
 ): Promise<CrocheItem | null> {
   const db = await getDb();
   if (!db) {
-    console.warn("[Database] Cannot update croche item: database not available");
-    return null;
+    console.warn("[Database] Cannot update croche item: database not available, using local storage");
+    const updated = localDb.updateLocalCrocheItem(id, userId, {
+      name: item.name,
+      quantity: item.quantity,
+      price: item.price,
+    });
+    return updated ? {
+      ...updated,
+      id: updated.id,
+      userId: updated.userId,
+      name: updated.name,
+      quantity: updated.quantity,
+      price: updated.price,
+    } as unknown as CrocheItem : null;
   }
 
   try {
@@ -178,8 +211,8 @@ export async function updateCrocheItem(
 export async function deleteCrocheItem(id: number, userId: string): Promise<boolean> {
   const db = await getDb();
   if (!db) {
-    console.warn("[Database] Cannot delete croche item: database not available");
-    return false;
+    console.warn("[Database] Cannot delete croche item: database not available, using local storage");
+    return localDb.deleteLocalCrocheItem(id, userId);
   }
 
   try {
